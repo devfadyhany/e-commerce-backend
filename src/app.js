@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import connectDB from "./DB/connection.js";
 
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
@@ -25,6 +26,15 @@ app.post(
 );
 
 app.use(express.json());
+
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
