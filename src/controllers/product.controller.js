@@ -128,7 +128,11 @@ export async function GetAllProducts(req, res) {
   } catch (error) {
     res
       .status(400)
-      .send({ success: false, message: "Failed to get products", error });
+      .send({
+        success: false,
+        message: "Failed to get products",
+        error: error.message,
+      });
   }
 }
 
