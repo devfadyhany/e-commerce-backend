@@ -14,7 +14,8 @@ import auth from "./middleware/auth.middleware.js";
 
 const app = express();
 
-app.use(cors({ origin: [process.env.CLIENT_URL, process.env.ADMIN_URL] }));
+// app.use(cors({ origin: [process.env.CLIENT_URL, process.env.ADMIN_URL] }));
+app.use(cors());
 
 // Stripe Webhook
 app.post(
