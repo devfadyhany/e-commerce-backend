@@ -1,17 +1,27 @@
 import express from "express";
-import auth from "../middleware/auth.middleware.js";
-import * as wishlistController from "../controllers/wishlist.controller.js";
+
+import {
+  getWishlists,
+  addProduct,
+  removeProduct,
+  clearWishlist,
+} from "../controllers/wishlist.controller.js";
+
+import {
+  getAllWishlists,
+  getWishlistStats,
+} from "../controllers/admin.controller.js";
+
+import adminPerms from "../middleware/admin.middleware.js";
 
 const router = express.Router();
 
-router.use(auth);
+router.get("/my", getWishlists);
+router.post("/add/:productId", addProduct);
+router.delete("/remove/:productId", removeProduct);
+router.delete("/clear", clearWishlist);
 
-router.get("/my", wishlistController.getWishlists);
-
-router.post("/add/:productId", wishlistController.addProduct);
-
-router.delete("/remove/:productId", wishlistController.removeProduct);
-
-router.delete("/clear", wishlistController.clearWishlist);
+router.get("/admin/all", adminPerms, getAllWishlists);
+router.get("/admin/stats", adminPerms, getWishlistStats);
 
 export default router;

@@ -25,37 +25,38 @@ const cartItemSchema = new mongoose.Schema({
   },
 });
 
-const cartSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-     unique: true,
-  },
-  items: {
-    type: [cartItemSchema],
-    default: [],
-  },
-  coupon: {
-    code: {
-      type: String,
-      required: false,
-    },
-    discountType: {
-      type: String,
-      enum: ["percentage", "fixed"],
-      required: false,
-    },
-    discountValue: {
-      type: Number,
-      required: false,
-    },
-  },
-},
+const cartSchema = new mongoose.Schema(
   {
-    toJSON: {virtuals: true},
-    toObject: {virtuals: true}
-  }
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+    },
+    items: {
+      type: [cartItemSchema],
+      default: [],
+    },
+    coupon: {
+      code: {
+        type: String,
+        required: false,
+      },
+      discountType: {
+        type: String,
+        enum: ["percentage", "fixed"],
+        required: false,
+      },
+      discountValue: {
+        type: Number,
+        required: false,
+      },
+    },
+  },
+  {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  },
 );
 
 cartSchema.virtual("subtotal").get(function () {

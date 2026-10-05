@@ -24,7 +24,7 @@ const reviewSchema = new mongoose.Schema(
   {
     _id: true,
     timestamps: true,
-  }
+  },
 );
 
 const imageSchema = new mongoose.Schema(
@@ -41,7 +41,7 @@ const imageSchema = new mongoose.Schema(
   },
   {
     _id: false,
-  }
+  },
 );
 
 const productSchema = new mongoose.Schema(
@@ -107,8 +107,7 @@ const productSchema = new mongoose.Schema(
       type: [imageSchema],
       required: [true, "Product images are required"],
       validate: {
-        validator: (images) =>
-          Array.isArray(images) && images.length >= 1,
+        validator: (images) => Array.isArray(images) && images.length >= 1,
         message: "At least one product image is required",
       },
     },
@@ -173,7 +172,7 @@ const productSchema = new mongoose.Schema(
     toJSON: true,
     toObject: true,
     timestamps: true,
-  }
+  },
 );
 
 productSchema.pre("save", async function generateSlug() {
@@ -214,14 +213,9 @@ productSchema.methods.calcAverageRating = function calcAverageRating() {
     return;
   }
 
-  const totalRating = reviews.reduce(
-    (sum, review) => sum + review.rating,
-    0
-  );
+  const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
 
-  this.averageRating = Math.round(
-    (totalRating / reviews.length) * 10
-  ) / 10;
+  this.averageRating = Math.round((totalRating / reviews.length) * 10) / 10;
 };
 
 productSchema.virtual("hasDiscount").get(function hasDiscount() {

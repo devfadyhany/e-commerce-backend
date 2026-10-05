@@ -1,35 +1,23 @@
 import Joi from "joi";
 
 const registerSchema = Joi.object({
-  username: Joi.string()
-    .min(3)
-    .max(30)
-    .required(),
+  username: Joi.string().min(3).max(30).required(),
 
-  email: Joi.string()
-    .email()
-    .required(),
+  email: Joi.string().email().required(),
 
-  password: Joi.string()
-    .min(8)
-    .required(),
+  password: Joi.string().min(8).required(),
 
   phone: Joi.string(),
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string()
-    .email()
-    .required(),
+  email: Joi.string().email().required(),
 
-  password: Joi.string()
-    .required(),
+  password: Joi.string().required(),
 });
 
 const otpSchema = Joi.object({
-  email: Joi.string()
-    .email()
-    .required(),
+  email: Joi.string().email().required(),
 
   otp: Joi.string()
     .length(6)
@@ -38,24 +26,23 @@ const otpSchema = Joi.object({
 });
 
 const forgotPasswordSchema = Joi.object({
-  email: Joi.string()
-    .email()
-    .required(),
+  email: Joi.string().email().required(),
 });
 
 const resetPasswordSchema = Joi.object({
-  email: Joi.string()
-    .email()
-    .required(),
+  email: Joi.string().email().required(),
 
   otp: Joi.string()
     .length(6)
     .pattern(/^[0-9]+$/)
     .required(),
 
-  newPassword: Joi.string()
-    .min(8)
-    .required(),
+  newPassword: Joi.string().min(8).required(),
+});
+
+const changeRoleSchema = Joi.object({
+  userId: Joi.string().hex().length(24).required(),
+  role: Joi.string().valid("customer", "admin").required(),
 });
 
 export {
@@ -64,7 +51,5 @@ export {
   otpSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  changeRoleSchema,
 };
-
-
-

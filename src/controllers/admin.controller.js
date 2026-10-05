@@ -9,172 +9,183 @@ import sendEmail from "../utils/sendEmail.js";
 // Admin Dashboard
 const getDashboard = async (req, res, next) => {
   try {
-
- // Calculate total revenue from paid orders
-const revenueResult = await Order.aggregate([
-  {
-    $match: {
-      paymentStatus: "paid",
-    },
-  },
-  {
-    $group: {
-      _id: null,
-      totalRevenue: {
-        $sum: "$totalPrice",
-      },
-    },
-  },
-]);
-
-const revenue = revenueResult[0]?.totalRevenue || 0;
-
-    
     const now = new Date();
 
-      const startOfCurrentMonth = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      1
-    );
-
-    const monthlyRevenueResult = await Order.aggregate([
-     {
-       $match: {
-        paymentStatus: "paid",
-        createdAt: {
-         $gte: startOfCurrentMonth,
+    // Total revenue from paid orders
+    const revenueResult = await Order.aggregate([
+      {
+        $match: {
+          paymentStatus: "paid",
         },
-       },
       },
-     {
-       $group: {
-       _id: null,
-       totalRevenue: {
-        $sum: "$totalPrice",
-         },
-       },
-     },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: {
+            $sum: "$totalPrice",
+          },
+        },
+      },
     ]);
 
-    const monthlyRevenue =
-     monthlyRevenueResult[0]?.totalRevenue || 0;
+    const revenue = revenueResult[0]?.totalRevenue || 0;
 
-   // Calculate last month revenue
-   const startOfLastMonth = new Date(
-    now.getFullYear(),
-    now.getMonth() - 1,
-    1
-   );
+    // This month's revenue
+    const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-   const endOfLastMonth = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    0,
-    23,
-    59,
-    59,
-    999
-   );
-
-   const lastMonthRevenueResult = await Order.aggregate([
-     {
-       $match: {
-        paymentStatus: "paid",
-       createdAt: {
-        $gte: startOfLastMonth,
-        $lte: endOfLastMonth,
+    const monthlyRevenueResult = await Order.aggregate([
+      {
+        $match: {
+          paymentStatus: "paid",
+          createdAt: {
+            $gte: startOfCurrentMonth,
+          },
         },
       },
-     },
-     {
-     $group: {
-       _id: null,
-      totalRevenue: {
-        $sum: "$totalPrice",
+      {
+        $group: {
+          _id: null,
+          totalRevenue: {
+            $sum: "$totalPrice",
+          },
+        },
       },
-     },
-    },
-   ]);
+    ]);
 
-  const lastMonthRevenue =
-  lastMonthRevenueResult[0]?.totalRevenue || 0;
+    const monthlyRevenue = monthlyRevenueResult[0]?.totalRevenue || 0;
 
-  //Calculate revenue growth percentage
-  const growthPercentage =
-   lastMonthRevenue === 0
-    ? monthlyRevenue > 0
-      ? 100
-      : 0
-    : ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+    // Last month's revenue
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
+    const endOfLastMonth = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
 
-
-  //Count total orders excluding cancelled and returned orders
-    const totalOrders = await Order.countDocuments({
-      status: {
-        $nin: ["cancelled", "returned"],
+    const lastMonthRevenueResult = await Order.aggregate([
+      {
+        $match: {
+          paymentStatus: "paid",
+          createdAt: {
+            $gte: startOfLastMonth,
+            $lte: endOfLastMonth,
+          },
+        },
       },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: {
+            $sum: "$totalPrice",
+          },
+        },
+      },
+    ]);
+
+    const lastMonthRevenue = lastMonthRevenueResult[0]?.totalRevenue || 0;
+
+    // Revenue growth percentage
+    const growthPercentage =
+      lastMonthRevenue === 0
+        ? monthlyRevenue > 0
+          ? 100
+          : 0
+        : ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+
+    // Order counts
+    const orderCountsResult = await Order.aggregate([
+      {
+        $match: {
+          status: {
+            $in: [
+              "pending",
+              "processing",
+              "confirmed",
+              "shipped",
+              "delivered",
+              "cancelled",
+              "returned",
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$status",
+          count: {
+            $sum: 1,
+          },
+        },
+      },
+    ]);
+
+    const orderCounts = {
+      pending: 0,
+      confirmed: 0,
+      processing: 0,
+      shipped: 0,
+      delivered: 0,
+      cancelled: 0,
+      returned: 0,
+    };
+
+    orderCountsResult.forEach((item) => {
+      if (item._id in orderCounts) {
+        orderCounts[item._id] = item.count;
+      }
     });
 
-  // Order counts for each status
-  const orderCountsResult = await Order.aggregate([
-   {
-     $group: {
-       _id: "$status",
-     count: {
-        $sum: 1,
+    // Total orders
+    const totalOrders = Object.values(orderCounts).reduce(
+      (total, count) => total + count,
+      0,
+    );
+
+    // Customers
+    const totalCustomers = await User.countDocuments({
+      role: "customer",
+    });
+
+    // Top 5 best-selling products
+    const topProducts = await Order.aggregate([
+      {
+        $match: {
+          status: {
+            $nin: ["cancelled", "returned"],
+          },
+        },
       },
-     },
-   },
- ]);
-
-  const orderCounts = {
-   pending: 0,
-   confirmed: 0,
-   processing: 0,
-   shipped: 0,
-   delivered: 0,
-   cancelled: 0,
-   returned: 0,
-  };
-
-  orderCountsResult.forEach((item) => {
-   if (item._id in orderCounts) {
-    orderCounts[item._id] = item.count;
-   }
-  });
-
-
-
-  //Count registered customers only
-  const totalCustomers = await User.countDocuments({
-   role: "customer",
-  });
-
-  //Get the top 5 best-selling products
-  const topProducts = await Order.aggregate([
-     {
-    $match: {
-      status: { $nin: ["cancelled", "returned"] },
-    },
-  },
-    {
-      $unwind: "$items",
-    },
-    {
-  $group: {
-    _id: "$items.name",
-    totalSold: {
-      $sum: "$items.quantity",
-    },
-    totalRevenue: {
-      $sum: {
-        $multiply: ["$items.price", "$items.quantity"],
+      {
+        $unwind: "$items",
       },
-    },
-  },
-},
+      {
+        $group: {
+          _id: "$items.name",
+
+          name: {
+            $first: "$items.name",
+          },
+
+          image: {
+            $first: "$items.image",
+          },
+
+          totalSold: {
+            $sum: "$items.quantity",
+          },
+
+          revenue: {
+            $sum: {
+              $multiply: ["$items.price", "$items.quantity"],
+            },
+          },
+        },
+      },
       {
         $sort: {
           totalSold: -1,
@@ -183,9 +194,26 @@ const revenue = revenueResult[0]?.totalRevenue || 0;
       {
         $limit: 5,
       },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          image: 1,
+          totalSold: 1,
+          revenue: 1,
+        },
+      },
     ]);
 
-    //Calculate daily revenue for the last 7 days
+    // Orders by status
+    const ordersByStatus = Object.entries(orderCounts).map(
+      ([status, count]) => ({
+        _id: status,
+        count,
+      }),
+    );
+
+    // Daily revenue for the last 7 days
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -206,24 +234,24 @@ const revenue = revenueResult[0]?.totalRevenue || 0;
               date: "$createdAt",
             },
           },
+
           revenue: {
             $sum: "$totalPrice",
           },
-       
-      //Count orders for each day
-      orderCount:{
-        $sum:1,
+
+          orders: {
+            $sum: 1,
+          },
+        },
       },
-    },
-  },
-  {
+      {
         $sort: {
           _id: 1,
         },
       },
     ]);
 
-    //Get the 5 most recent active orders
+    // 5 most recent active orders
     const recentOrders = await Order.find({
       status: {
         $nin: ["cancelled", "returned"],
@@ -232,20 +260,38 @@ const revenue = revenueResult[0]?.totalRevenue || 0;
       .sort({ createdAt: -1 })
       .limit(5);
 
-    //Send dashboard statistics
+    // Response
     res.status(200).json({
       success: true,
-      message: "Dashboard data fetched successfully",
-      revenue,
-      monthlyRevenue,
-      lastMonthRevenue,
-      growthPercentage,
-      totalOrders,
-      orderCounts,
-      totalCustomers,
-      topProducts,
-      dailyRevenue,
-      recentOrders,
+
+      dashboard: {
+        orders: {
+          total: totalOrders,
+          pending: orderCounts.pending,
+          processing: orderCounts.processing,
+          confirmed: orderCounts.confirmed,
+          shipped: orderCounts.shipped,
+          delivered: orderCounts.delivered,
+          cancelled: orderCounts.cancelled,
+        },
+
+        revenue: {
+          total: revenue,
+          thisMonth: monthlyRevenue,
+          lastMonth: lastMonthRevenue,
+          growthPercent: growthPercentage,
+        },
+
+        recentOrders,
+
+        topProducts,
+
+        ordersByStatus,
+
+        dailyRevenue,
+
+        totalCustomers,
+      },
     });
   } catch (error) {
     next(error);
@@ -346,7 +392,7 @@ const getWishlistStats = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Wishlist statistics fetched successfully",
-     topProducts: stats,
+      topProducts: stats,
     });
   } catch (error) {
     next(error);
@@ -398,9 +444,9 @@ const getAllOrders = async (req, res, next) => {
     }
 
     // Sorting
-  const sortOrder = order === "asc" ? 1 : -1;
+    const sortOrder = order === "asc" ? 1 : -1;
 
-      const [orders, totalOrders] = await Promise.all([
+    const [orders, totalOrders] = await Promise.all([
       Order.find(filter)
         .sort({ [sort]: sortOrder })
         .skip(skip)
@@ -408,22 +454,22 @@ const getAllOrders = async (req, res, next) => {
       Order.countDocuments(filter),
     ]);
 
-const totalPages = Math.ceil(totalOrders / limit);
+    const totalPages = Math.ceil(totalOrders / limit);
 
-   res.status(200).json({
-  success: true,
-  orders,
-  totalOrders,
-  currentPage: page,
-  totalPages,
-});
+    res.status(200).json({
+      success: true,
+      orders,
+      totalOrders,
+      currentPage: page,
+      totalPages,
+    });
   } catch (error) {
     next(error);
-   }
-  };
+  }
+};
 
 // Get Order By ID
-const getOrderById = async (req, res, next) => {
+const getOrderByIdAdmin = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -476,22 +522,20 @@ const updateOrderStatus = async (req, res, next) => {
       });
     }
 
-    const allowedTransitions = {
-      pending: ["confirmed", "cancelled"],
-      confirmed: ["processing", "cancelled"],
-      processing: ["shipped"],
-      shipped: ["delivered"],
-      delivered: [],
-      cancelled: [],
-      returned: [],
-    };
+    // const allowedTransitions = {
+    //   pending: ["confirmed", "cancelled"],
+    //   confirmed: ["processing", "cancelled"],
+    //   processing: ["shipped"],
+    //   shipped: ["delivered"],
+    //   delivered: [],
+    //   cancelled: [],
+    //   returned: [],
+    // };
 
     session = await mongoose.startSession();
     session.startTransaction();
 
-    const order = await Order.findById(id)
-      .populate("user")
-      .session(session);
+    const order = await Order.findById(id).populate("user").session(session);
 
     if (!order) {
       await session.abortTransaction();
@@ -501,13 +545,13 @@ const updateOrderStatus = async (req, res, next) => {
       });
     }
 
-    if (!allowedTransitions[order.status]?.includes(status)) {
-      await session.abortTransaction();
-      return res.status(400).json({
-        success: false,
-        message: `Cannot change order status from ${order.status} to ${status}`,
-      });
-    }
+    // if (!allowedTransitions[order.status]?.includes(status)) {
+    //   await session.abortTransaction();
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: `Cannot change order status from ${order.status} to ${status}`,
+    //   });
+    // }
 
     if (status === "cancelled") {
       for (const item of order.items) {
@@ -530,6 +574,7 @@ const updateOrderStatus = async (req, res, next) => {
 
     if (status === "delivered") {
       order.deliveredAt = new Date();
+      order.paymentStatus = "paid";
     }
 
     order.status = status;
@@ -577,11 +622,6 @@ export {
   getAllWishlists,
   getWishlistStats,
   getAllOrders,
-  getOrderById,
+  getOrderByIdAdmin,
   updateOrderStatus,
 };
-
-
-
-
-

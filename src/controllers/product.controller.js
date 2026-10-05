@@ -1,4 +1,5 @@
 import Product from "../models/Product.model.js";
+
 import productValidation, {
   updateProductValidation,
 } from "../validation/product.validation.js";
@@ -8,6 +9,7 @@ import {
   deleteFromCloudinary,
 } from "../utils/uploadToCloudinary.js";
 
+////////////////////////////////// Helper Functions ////////////////////////////////////
 async function cleanUpImages(images) {
   if (images.length > 0) {
     await Promise.all(
@@ -22,142 +24,7 @@ async function cleanUpImages(images) {
   }
 }
 
-// Search + Filter + Sort + Pagination
-const getProducts = async (req, res, next) => {
-  try {
-    const {
-      search,
-      category,
-      subcategory,
-      brand,
-      tags,
-      minPrice,
-      maxPrice,
-      sort,
-      page = 1,
-      limit = 10,
-    } = req.query;
-
-    const filter = {
-      isActive: true,
-    };
-
-    // Search
-    if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
-        { brand: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    // Category
-    if (category) {
-      filter.category = {
-        $regex: category,
-        $options: "i",
-      };
-    }
-
-    // Subcategory
-    if (subcategory) {
-      filter.subcategory = {
-        $regex: subcategory,
-        $options: "i",
-      };
-    }
-
-    // Brand
-    if (brand) {
-      filter.brand = {
-        $regex: brand,
-        $options: "i",
-      };
-    }
-
-    // Tags
-    if (tags) {
-      const tagList = tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean);
-
-      filter.tags = {
-        $in: tagList,
-      };
-    }
-
-    // Price
-    if (minPrice !== undefined || maxPrice !== undefined) {
-      filter.price = {};
-
-      if (minPrice !== undefined) {
-        filter.price.$gte = Number(minPrice);
-      }
-
-      if (maxPrice !== undefined) {
-        filter.price.$lte = Number(maxPrice);
-      }
-    }
-
-    // Pagination
-    const currentPage = Math.max(Number(page) || 1, 1);
-    const itemsLimit = Math.max(Number(limit) || 10, 1);
-    const skip = (currentPage - 1) * itemsLimit;
-
-    // Sorting
-    let sortOption = {
-      createdAt: -1,
-    };
-
-    switch (sort) {
-      case "price_asc":
-        sortOption = { price: 1 };
-        break;
-
-      case "price_desc":
-        sortOption = { price: -1 };
-        break;
-
-      case "rating":
-        sortOption = { averageRating: -1 };
-        break;
-
-      case "popular":
-        sortOption = { numReviews: -1 };
-        break;
-
-      case "oldest":
-        sortOption = { createdAt: 1 };
-        break;
-
-      default:
-        sortOption = { createdAt: -1 };
-    }
-
-    const [products, totalProducts] = await Promise.all([
-      Product.find(filter)
-        .sort(sortOption)
-        .skip(skip)
-        .limit(itemsLimit),
-
-      Product.countDocuments(filter),
-    ]);
-
-    const totalPages = Math.ceil(totalProducts / itemsLimit);
-
-    res.status(200).json({
-      success: true,
-      totalProducts,
-      currentPage,
-      totalPages,
-      products,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
+////////////////////////////////////////////////////////////////////////////////////////
 
 export async function CreateProduct(req, res) {
   let images = [];
@@ -345,20 +212,18 @@ export async function UpdateProduct(req, res) {
       });
     }
 
-      const updatedProduct = await Product.findByIdAndUpdate(
+    const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
       { $set: value },
-      { new: true, runValidators: true }
-      );
-
-
+      { new: true, runValidators: true },
+    );
 
     await cleanUpImages(imagesToDelete);
 
     res.status(200).send({
       success: true,
       message: "Product updated successfully",
-      product:updatedProduct,
+      product: updatedProduct,
     });
   } catch (error) {
     await cleanUpImages(newImages);
@@ -393,8 +258,133 @@ export async function DeleteProduct(req, res) {
   }
 }
 
-// Add Review
-const addReview = async (req, res, next) => {
+export async function getProducts(req, res) {
+  try {
+    const {
+      search,
+      category,
+      subcategory,
+      brand,
+      tags,
+      minPrice,
+      maxPrice,
+      sort,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const filter = {
+      isActive: true,
+    };
+
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { brand: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (category) {
+      filter.category = {
+        $regex: category,
+        $options: "i",
+      };
+    }
+
+    if (subcategory) {
+      filter.subcategory = {
+        $regex: subcategory,
+        $options: "i",
+      };
+    }
+
+    if (brand) {
+      filter.brand = {
+        $regex: brand,
+        $options: "i",
+      };
+    }
+
+    if (tags) {
+      const tagList = tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+
+      filter.tags = {
+        $in: tagList,
+      };
+    }
+
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      filter.price = {};
+
+      if (minPrice !== undefined) {
+        filter.price.$gte = Number(minPrice);
+      }
+
+      if (maxPrice !== undefined) {
+        filter.price.$lte = Number(maxPrice);
+      }
+    }
+
+    const currentPage = Math.max(Number(page) || 1, 1);
+    const itemsLimit = Math.max(Number(limit) || 10, 1);
+    const skip = (currentPage - 1) * itemsLimit;
+
+    let sortOption = {
+      createdAt: -1,
+    };
+
+    switch (sort) {
+      case "price_asc":
+        sortOption = { price: 1 };
+        break;
+
+      case "price_desc":
+        sortOption = { price: -1 };
+        break;
+
+      case "rating":
+        sortOption = { averageRating: -1 };
+        break;
+
+      case "popular":
+        sortOption = { numReviews: -1 };
+        break;
+
+      case "oldest":
+        sortOption = { createdAt: 1 };
+        break;
+
+      default:
+        sortOption = { createdAt: -1 };
+    }
+
+    const [products, totalProducts] = await Promise.all([
+      Product.find(filter).sort(sortOption).skip(skip).limit(itemsLimit),
+
+      Product.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(totalProducts / itemsLimit);
+
+    res.status(200).json({
+      success: true,
+      totalProducts,
+      currentPage,
+      totalPages,
+      products,
+    });
+  } catch (error) {
+    res
+      .status(400)
+      .send({ success: false, message: "Failed to get products", error });
+  }
+}
+
+export async function addReview(req, res) {
   try {
     const { id } = req.params;
     const { rating, comment } = req.body;
@@ -411,7 +401,7 @@ const addReview = async (req, res, next) => {
     const userId = req.user._id || req.user.id || req.user.userId;
 
     const alreadyReviewed = product.reviews.find(
-      (review) => review.user.toString() === userId.toString()
+      (review) => review.user.toString() === userId.toString(),
     );
 
     if (alreadyReviewed) {
@@ -431,8 +421,7 @@ const addReview = async (req, res, next) => {
 
     await product.save();
 
-    const addedReview =
-      product.reviews[product.reviews.length - 1];
+    const addedReview = product.reviews[product.reviews.length - 1];
 
     res.status(201).json({
       success: true,
@@ -442,17 +431,18 @@ const addReview = async (req, res, next) => {
       numReviews: product.numReviews,
     });
   } catch (error) {
-    next(error);
+    res
+      .status(400)
+      .send({ success: false, message: "Failed to add review", error });
   }
-};
+}
 
-// Get Reviews
-const getReviews = async (req, res, next) => {
+export async function getReviews(req, res) {
   try {
     const { id } = req.params;
 
     const product = await Product.findById(id).select(
-      "reviews averageRating numReviews"
+      "reviews averageRating numReviews",
     );
 
     if (!product) {
@@ -469,12 +459,13 @@ const getReviews = async (req, res, next) => {
       numReviews: product.numReviews,
     });
   } catch (error) {
-    next(error);
+    res
+      .status(400)
+      .send({ success: false, message: "Failed to get reviews", error });
   }
-};
+}
 
-// Delete Review
-const deleteReview = async (req, res, next) => {
+export async function deleteReview(req, res) {
   try {
     const { id, rid } = req.params;
 
@@ -500,7 +491,7 @@ const deleteReview = async (req, res, next) => {
 
     const isOwner = review.user.toString() === userId.toString();
     const isAdmin = req.user.role === "admin";
-    
+
     if (!isOwner && !isAdmin) {
       return res.status(403).json({
         success: false,
@@ -520,14 +511,8 @@ const deleteReview = async (req, res, next) => {
       numReviews: product.numReviews,
     });
   } catch (error) {
-    next(error);
+    res
+      .status(400)
+      .send({ success: false, message: "Failed to delete review", error });
   }
-};
-
-export {
-  getProducts,
-  addReview,
-  getReviews,
-  deleteReview,
-};
-
+}

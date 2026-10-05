@@ -1,4 +1,5 @@
 import express from "express";
+
 import {
   addUser,
   getAllUsers,
@@ -26,29 +27,24 @@ router.post(
   authMiddleware,
   adminMiddleware,
   validate(createUserSchema),
-  addUser
+  addUser,
 );
 
-router.get(
-  "/all",
-  authMiddleware,
-  adminMiddleware,
-  getAllUsers
-);
+router.get("/all", authMiddleware, adminMiddleware, getAllUsers);
 
 router.get(
   "/:id",
   authMiddleware,
   adminMiddleware,
   validate(userIdSchema, "params"),
-  getUserById
+  getUserById,
 );
 
 router.patch(
   "/password",
   authMiddleware,
   validate(changePasswordSchema),
-  changePassword
+  changePassword,
 );
 
 router.patch(
@@ -56,7 +52,7 @@ router.patch(
   authMiddleware,
   validate(userIdSchema, "params"),
   validate(updateUserSchema, "body"),
-  updateUser
+  updateUser,
 );
 
 router.delete(
@@ -64,7 +60,7 @@ router.delete(
   authMiddleware,
   adminMiddleware,
   validate(userIdSchema, "params"),
-  deleteUser
+  deleteUser,
 );
 
 export default router;

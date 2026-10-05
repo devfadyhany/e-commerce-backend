@@ -1,4 +1,4 @@
-const validate = (schema , source = "body") => {
+const validate = (schema, source = "body") => {
   return (req, res, next) => {
     const { error } = schema.validate(req[source], {
       abortEarly: false,
@@ -20,4 +20,3 @@ const validate = (schema , source = "body") => {
 };
 
 export default validate;
-

@@ -18,55 +18,23 @@ import upload from "../middleware/upload.middleware.js";
 
 const router = express.Router();
 
-// CRUD
-router.post(
-  "/",
-  auth,
-  adminPerms,
-  upload.array("images", 5),
-  CreateProduct
-);
-
+router.post("/", auth, adminPerms, upload.array("images", 5), CreateProduct);
 router.get("/", GetAllProducts);
-
-// Search + Filter + Sort + Pagination
-router.get("/search", getProducts);
-
-// Update Product
+router.get("/:id", GetProductById);
+router.delete("/:id", auth, adminPerms, DeleteProduct);
 router.patch(
   "/update/:id",
   auth,
   adminPerms,
   upload.array("images", 5),
-  UpdateProduct
+  UpdateProduct,
 );
 
+// Search + Filter + Sort + Pagination
+router.get("/search", getProducts);
 
-// Product by ID
-router.get("/:id", GetProductById);
-
-// Reviews
 router.get("/:id/reviews", getReviews);
-
-router.post(
-  "/:id/reviews",
-  auth,
-  addReview
-);
-
-router.delete(
-  "/:id/reviews/:rid",
-  auth,
-  deleteReview
-);
-
-
-
-router.delete(
-  "/:id",
-  auth,
-  adminPerms,
-  DeleteProduct
-);
+router.post("/:id/reviews", auth, addReview);
+router.delete("/:id/reviews/:rid", auth, deleteReview);
 
 export default router;

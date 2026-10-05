@@ -2,72 +2,70 @@ import stripe from "../config/stripe.js";
 import Order from "../models/Order.model.js";
 
 const createPaymentIntent = async (req, res, next) => {
-    try {
-        const { orderId } = req.body;
+  try {
+    const { orderId } = req.body;
 
-        const order = await Order.findOne({
-            _id: orderId,
-            user: req.user._id,
-        });
+    const order = await Order.findOne({
+      _id: orderId,
+      user: req.user._id,
+    });
 
-        if (!order) {
-            const error = new Error("Order not found");
-            error.statusCode = 404;
-            return next(error);
-        }
-
-        if (order.paymentMethod !== "stripe") {
-            const error = new Error("This order does not use Stripe");
-            error.statusCode = 400;
-            return next(error);
-        }
-        if (order.paymentStatus === "paid") {
-        const error = new Error("Order is already paid");
-        error.statusCode = 400;
-        return next(error);
-        }
-
-         if (order.transactionId) {
-            const paymentIntent = await stripe.paymentIntents.retrieve(
-                order.transactionId
-            );
-        
-            if (paymentIntent.status !== "canceled") {
-                return res.status(200).json({
-                    success: true,
-                    paymentIntentId: paymentIntent.id,
-                    clientSecret: paymentIntent.client_secret,
-                    status: paymentIntent.status,
-                });
-            }
-        }
-
-
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(order.totalPrice * 100),
-          currency: "egp",
-          automatic_payment_methods: {
-              enabled: true,
-              allow_redirects: "never",
-          },
-      });
-
-        order.transactionId = paymentIntent.id;
-
-        await order.save();
-
-        res.status(200).json({
-            success: true,
-            paymentIntentId: paymentIntent.id,
-            clientSecret: paymentIntent.client_secret,
-            status: paymentIntent.status,
-        });
-
-    } catch (error) {
-        next(error);
+    if (!order) {
+      const error = new Error("Order not found");
+      error.statusCode = 404;
+      return next(error);
     }
+
+    if (order.paymentMethod !== "stripe") {
+      const error = new Error("This order does not use Stripe");
+      error.statusCode = 400;
+      return next(error);
+    }
+    if (order.paymentStatus === "paid") {
+      const error = new Error("Order is already paid");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (order.transactionId) {
+      const paymentIntent = await stripe.paymentIntents.retrieve(
+        order.transactionId,
+      );
+
+      if (paymentIntent.status !== "canceled") {
+        return res.status(200).json({
+          success: true,
+          paymentIntentId: paymentIntent.id,
+          clientSecret: paymentIntent.client_secret,
+          status: paymentIntent.status,
+        });
+      }
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(order.totalPrice * 100),
+      currency: "egp",
+      automatic_payment_methods: {
+        enabled: true,
+        allow_redirects: "never",
+      },
+    });
+
+    order.transactionId = paymentIntent.id;
+
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      paymentIntentId: paymentIntent.id,
+      clientSecret: paymentIntent.client_secret,
+      status: paymentIntent.status,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
-//////////////////////////////
+
 const stripeWebhook = async (req, res) => {
   const signature = req.headers["stripe-signature"];
 
@@ -77,7 +75,7 @@ const stripeWebhook = async (req, res) => {
     event = stripe.webhooks.constructEvent(
       req.body,
       signature,
-      process.env.STRIPE_WEBHOOK_SECRET
+      process.env.STRIPE_WEBHOOK_SECRET,
     );
   } catch (error) {
     console.error("Webhook signature verification failed:", error.message);
@@ -87,7 +85,6 @@ const stripeWebhook = async (req, res) => {
 
   try {
     switch (event.type) {
-
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object;
 
@@ -130,7 +127,6 @@ const stripeWebhook = async (req, res) => {
     }
 
     return res.status(200).json({ received: true });
-
   } catch (error) {
     console.error("Webhook processing error:", error);
 
@@ -141,8 +137,4 @@ const stripeWebhook = async (req, res) => {
   }
 };
 
-
-export {
-  createPaymentIntent,
-  stripeWebhook,
-};
+export { createPaymentIntent, stripeWebhook };

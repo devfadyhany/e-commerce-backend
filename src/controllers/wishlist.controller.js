@@ -7,7 +7,7 @@ export const getWishlists = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: "Wishlist fetched successfully",
+      totalProducts: wishlist ? wishlist.products.length : 0,
       wishlist,
     });
   } catch (err) {
@@ -67,7 +67,6 @@ export const removeProduct = async (req, res, next) => {
 
     // Check if there is no product with productId
     const product = await Product.findById(productId);
-
 
     const wishlist = await WishList.findOneAndUpdate(
       { user: req.user._id },
